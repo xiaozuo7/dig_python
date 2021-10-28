@@ -179,7 +179,7 @@ def get_args_config(argv):
     model = "check"
 
     try:
-        opts, args = getopt.getopt(argv, "hf:z:m:", ["help", "f5=", "zdns=", "modle="])
+        opts, args = getopt.getopt(argv, "hf:z:m:", ["help", "f5=", "zdns=", "model="])
     except getopt.GetoptError:
         print('Error: error args! use <--help> to find usage.')
         sys.exit(2)
