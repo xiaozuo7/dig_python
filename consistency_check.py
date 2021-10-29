@@ -1,12 +1,13 @@
 import requests
-import urllib3
 
+import urllib3
 import subprocess
 import shlex
 import math
 import logging
 import getopt
 import sys
+from collections import Counter
 
 urllib3.disable_warnings()
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
@@ -14,9 +15,8 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 logging.basicConfig(filename="dig.log", level=logging.INFO, format=LOG_FORMAT, datefmt=DATE_FORMAT)
 
 # common_params
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"}
-f5_zones = ["a", "aaaa", "cname", "mx", "naptr", "srv"]
+headers = {"Content-type": "application/json"}
+f5_zones = ["a", "aaaa", "cname"]
 page_size_max = 500
 
 
@@ -40,7 +40,7 @@ def get_res_from_f5(**kwargs):
             continue
         else:
             for item in items:
-                f5_name_arr.append(item.get("name") + ".")
+                f5_name_arr.append(str.lower(item.get("name") + "."))
     return f5_name_arr
 
 
@@ -159,10 +159,12 @@ def check_dig_res(arr, flag="check", **kwargs):
     for domain_name in arr:
         zdns_res = get_dig_resp(server_name=zdns_parse_host, domain_name=domain_name)
         f5_res = get_dig_resp(server_name=f5_parse_host, domain_name=domain_name)
+        z_dict = Counter(zdns_res)
+        f_dict = Counter(f5_res)
         if flag == "normal":
             logging.info(f"domain_name:{domain_name}\nzdns: {zdns_res}\nf5: {f5_res}")
         if flag == "check":
-            if zdns_res != f5_res:
+            if z_dict != f_dict:
                 res = True
                 logging.error(f"dig analysis result different: {domain_name}\n zdns: {zdns_res}\nf5: {f5_res}")
     return res
@@ -236,12 +238,14 @@ def get_args_config(argv):
 
 if __name__ == "__main__":
     config_dict = get_args_config(sys.argv[1:])
+    print("loading data from zdns...")
     zdns_arr = get_res_from_zdns(**config_dict)
+    print("loading data from f5...")
     f5_arr = get_res_from_f5(**config_dict)
-
+    print("checking...")
     res = _check_diff(zdns_arr, f5_arr)
     if len(res) > 0:
-        logging.error(f"missing data: (can not find wideIp from f5): {res}")
+        print(f"error! missing data: (can not find wideIp from f5): {res}")
         sys.exit(1)
 
     if config_dict.get("model") == "check":
