@@ -13,6 +13,6 @@ Flags:
 ### Example
 
 ```shell
-python3 consistency_check.py -f user:pswd@10.0.0.1:10.0.0.2 -z user:pswd@10.1.0.1@10.1.0.2 -m check  # 自动对比不一致数据
-python3 consistency_check.py -f user:pswd@10.0.0.1:10.0.0.2 -z user:pswd@10.1.0.1@10.1.0.2 -m normal # 只输出解析结果
+python3 dig_check.py -f user:pswd@10.0.0.1:10.0.0.2 -z user:pswd@10.1.0.1@10.1.0.2 -m check  # 自动对比不一致数据
+python3 dig_check.py -f user:pswd@10.0.0.1:10.0.0.2 -z user:pswd@10.1.0.1@10.1.0.2 -m normal # 只输出解析结果
 ```
