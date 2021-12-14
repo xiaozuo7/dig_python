@@ -12,7 +12,7 @@ from collections import Counter
 urllib3.disable_warnings()
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-logging.basicConfig(filename="dig.log", filemode="w+", level=logging.INFO, format=LOG_FORMAT, datefmt=DATE_FORMAT)
+logging.basicConfig(filename="dig.log", level=logging.INFO, format=LOG_FORMAT, datefmt=DATE_FORMAT)
 
 # common_params
 headers = {"Content-type": "application/json"}
