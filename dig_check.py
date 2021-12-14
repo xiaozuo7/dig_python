@@ -164,21 +164,21 @@ def check_dig_res(dns_dict, flag="check", **kwargs):
         for domain_name in arr:
             zdns_res = get_dig_resp(server_name=zdns_parse_host, domain_name=domain_name, type=domain_type)
             f5_res = get_dig_resp(server_name=f5_parse_host, domain_name=domain_name, type=domain_type)
-            z_dict = Counter(zdns_res)
+            z_dict = Counter(zdns_res)  # dig返回多条数据采用Counter来统计
             f_dict = Counter(f5_res)
 
             if flag == "normal":
                 logging.info(f"domain_name:{domain_name}\nzdns: {zdns_res}\nf5: {f5_res}")
             if flag == "check":
-                count = dig_retry_times
+                retry_times = dig_retry_times
                 while True:
-                    if z_dict == f_dict or count == 0:
+                    if z_dict == f_dict or retry_times == 0:
                         res = True
                         logging.error(f"dig analysis result different: {domain_name}\n zdns: {zdns_res}\nf5: {f5_res}")
                         break
                     f5_res = get_dig_resp(server_name=f5_parse_host, domain_name=domain_name, type=domain_type)
                     f_dict = Counter(f5_res)
-                    count -= 1
+                    retry_times -= 1
 
     return res
 
