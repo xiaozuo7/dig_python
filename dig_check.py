@@ -203,8 +203,8 @@ def get_args_config(argv):
         if opt in ("-h, --help"):
             print('Flags: ')
             print('-h  or --help        find help                      帮助信息')
-            print('-f  or --f5          f5 user:password@host1:host2   f5格式(必传)    用户:密码@数据服务器ip:解析服务器ip')
-            print('-z  or --zdns        zdns user:password@host1:host2 ZDNS格式(必传)  用户:密码@数据服务器ip:解析服务器ip')
+            print('-f  or --f5          f5 user:password@host1/host2   f5格式(必传)    用户:密码@数据服务器ip:port/解析服务器ip')
+            print('-z  or --zdns        zdns user:password@host1/host2 ZDNS格式(必传)  用户:密码@数据服务器ip:port/解析服务器ip')
             print('-m  or --model       normal|check; Default=check    检查模式(非必传) <1-常规 2-对比> 默认对比模式')
             sys.exit(0)
         elif opt in ("-f", "--f5"):
@@ -223,14 +223,14 @@ def get_args_config(argv):
         sys.exit(2)
 
     f5_config_list = f5_config.split('@')
-    f5_host_list = f5_config_list[-1].split(':')
+    f5_host_list = f5_config_list[-1].split('/')
     f5_data_host = f5_host_list[0]
     f5_parse_host = f5_host_list[-1]
     f5_user = f5_config_list[0].split(':')[0]
     f5_password = f5_config_list[0].split(':')[-1]
 
     zdns_config_list = zdns_config.split('@')
-    zdns_host_list = zdns_config_list[-1].split(':')
+    zdns_host_list = zdns_config_list[-1].split('/')
     zdns_data_host = zdns_host_list[0]
     zdns_parse_host = zdns_host_list[-1]
     zdns_user = zdns_config_list[0].split(':')[0]
