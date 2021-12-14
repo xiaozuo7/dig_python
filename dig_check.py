@@ -250,17 +250,25 @@ def get_args_config(argv):
 
 
 if __name__ == "__main__":
+    # =============命令行获取配置文件=============
     config_dict = get_args_config(sys.argv[1:])
+
+    # =============获取zdns数据=============
     print("loading data from zdns...")
     zdns_arr = get_res_from_zdns(**config_dict)
+
+    # =============获取f5数据=============
     print("loading data from f5...")
     f5_arr, f5_dict = get_res_from_f5(**config_dict)
+
+    # =============检查数据是否一致=============
     print("checking...")
     res = _check_diff(zdns_arr, f5_arr)
     if len(res) > 0:
         print(f"error! missing data: (can not find wideIp from f5): {res}")
         sys.exit(1)
 
+    # =============dig解析对比(对比结果是否一致)=============
     if config_dict.get("model") == "check":
         if check_dig_res(f5_dict, **config_dict):
             print("find different data! you can open dig.log file to check")
@@ -268,6 +276,7 @@ if __name__ == "__main__":
         print("check passed!")
         sys.exit(0)
 
+    # =============dig解析输出(不作对比)=============
     if config_dict.get("model") == "normal":
         check_dig_res(f5_dict, flag="normal", **config_dict)
         print("finished! open dig.log file to check")
