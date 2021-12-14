@@ -18,6 +18,8 @@ logging.basicConfig(filename="dig.log", level=logging.INFO, format=LOG_FORMAT, d
 headers = {"Content-type": "application/json"}
 f5_zones = ["a", "aaaa", "cname"]
 page_size_max = 500
+# 当dig结果不一致时的重试次数
+dig_retry_times = 5
 
 
 def get_res_from_f5(**kwargs):
@@ -32,6 +34,7 @@ def get_res_from_f5(**kwargs):
     f5_base_url = f"https://{f5_data_host}/mgmt/tm/gtm/wideip"
 
     f5_name_arr = []
+    f5_name_dict = {}
     for zone in f5_zones:
         url = f"{f5_base_url}/{zone}"
         res = get_resp(url=url, auth=f5_auth)
@@ -41,7 +44,8 @@ def get_res_from_f5(**kwargs):
         else:
             for item in items:
                 f5_name_arr.append(str.lower(item.get("name") + "."))
-    return f5_name_arr
+        f5_name_dict[zone] = f5_name_arr
+    return f5_name_arr, f5_name_dict
 
 
 def get_res_from_zdns(**kwargs):
@@ -121,14 +125,14 @@ def get_resp(**kwargs):
     return res
 
 
-def get_dig_resp(server_name, domain_name):
+def get_dig_resp(server_name, domain_name, type):
     """
     dig 解析
     :param server_name: 服务器名字
     :param domain_name: 域名
     :return:
     """
-    cmd = f"dig @{server_name} {domain_name} +noall +answer"
+    cmd = f"dig @{server_name} {domain_name} {type} +noall +answer"
 
     proc = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
     out, err = proc.communicate()  # bytes
@@ -145,7 +149,7 @@ def get_dig_resp(server_name, domain_name):
     return res
 
 
-def check_dig_res(arr, flag="check", **kwargs):
+def check_dig_res(dns_dict, flag="check", **kwargs):
     """
     检测dig解析数据是否一致
     :param arr: domain arr
@@ -156,17 +160,26 @@ def check_dig_res(arr, flag="check", **kwargs):
     zdns_parse_host = kwargs.get("zdns_parse_host")
     f5_parse_host = kwargs.get("f5_parse_host")
     res = False
-    for domain_name in arr:
-        zdns_res = get_dig_resp(server_name=zdns_parse_host, domain_name=domain_name)
-        f5_res = get_dig_resp(server_name=f5_parse_host, domain_name=domain_name)
-        z_dict = Counter(zdns_res)
-        f_dict = Counter(f5_res)
-        if flag == "normal":
-            logging.info(f"domain_name:{domain_name}\nzdns: {zdns_res}\nf5: {f5_res}")
-        if flag == "check":
-            if z_dict != f_dict:
-                res = True
-                logging.error(f"dig analysis result different: {domain_name}\n zdns: {zdns_res}\nf5: {f5_res}")
+    for domain_type, arr in dns_dict:
+        for domain_name in arr:
+            zdns_res = get_dig_resp(server_name=zdns_parse_host, domain_name=domain_name, type=domain_type)
+            f5_res = get_dig_resp(server_name=f5_parse_host, domain_name=domain_name, type=domain_type)
+            z_dict = Counter(zdns_res)
+            f_dict = Counter(f5_res)
+
+            if flag == "normal":
+                logging.info(f"domain_name:{domain_name}\nzdns: {zdns_res}\nf5: {f5_res}")
+            if flag == "check":
+                count = dig_retry_times
+                while True:
+                    if z_dict == f_dict or count == 0:
+                        res = True
+                        logging.error(f"dig analysis result different: {domain_name}\n zdns: {zdns_res}\nf5: {f5_res}")
+                        break
+                    f5_res = get_dig_resp(server_name=f5_parse_host, domain_name=domain_name, type=domain_type)
+                    f_dict = Counter(f5_res)
+                    count -= 1
+
     return res
 
 
@@ -241,7 +254,7 @@ if __name__ == "__main__":
     print("loading data from zdns...")
     zdns_arr = get_res_from_zdns(**config_dict)
     print("loading data from f5...")
-    f5_arr = get_res_from_f5(**config_dict)
+    f5_arr, f5_dict = get_res_from_f5(**config_dict)
     print("checking...")
     res = _check_diff(zdns_arr, f5_arr)
     if len(res) > 0:
@@ -249,14 +262,14 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if config_dict.get("model") == "check":
-        if check_dig_res(zdns_arr, **config_dict):
+        if check_dig_res(f5_dict, **config_dict):
             print("find different data! you can open dig.log file to check")
             sys.exit(1)
         print("check passed!")
         sys.exit(0)
 
     if config_dict.get("model") == "normal":
-        check_dig_res(zdns_arr, flag="normal", **config_dict)
+        check_dig_res(f5_dict, flag="normal", **config_dict)
         print("finished! open dig.log file to check")
         sys.exit(0)
     else:
